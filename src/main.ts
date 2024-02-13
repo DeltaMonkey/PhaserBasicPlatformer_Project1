@@ -1,25 +1,5 @@
 import 'phaser';
-
-class PlayGame extends Phaser.Scene {
-
-    image: Phaser.GameObjects.Image;
-
-    constructor() {
-        super('PlayGame');
-    }
-
-    preload() {
-        this.load.image('logo', 'assets/phaser3_logo.png');
-    }
-
-    create() {
-        this.image = this.add.image(400, 300, 'logo');
-    }
-
-    update() {
-        this.image.rotation += 0.01;
-    }
-}
+import MainScene from './scenes/MainScene';
 
 let configObject: Phaser.Types.Core.GameConfig = {
     scale: {
@@ -29,7 +9,14 @@ let configObject: Phaser.Types.Core.GameConfig = {
         width: 800,
         height: 600,
     },
-    scene: PlayGame
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: true
+        }
+    },
+    scene: MainScene
 };
 
 new Phaser.Game(configObject);
