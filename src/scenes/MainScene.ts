@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import ScoreLabel from '../ui/ScoreLabel';
 
 const GROUND_KEY = 'ground';
 const DUDE_KEY = 'dude';
@@ -8,12 +9,14 @@ export default class MainScene extends Phaser.Scene {
 
     private player?: Phaser.Physics.Arcade.Sprite;
     private cursor?: Phaser.Types.Input.Keyboard.CursorKeys;
+    private scoreLabel?: ScoreLabel;
 
     constructor() {
         super('MainScene');
 
         this.player = undefined;
         this.cursor = undefined;
+        this.scoreLabel = undefined;
     }
 
     preload() {
@@ -31,6 +34,8 @@ export default class MainScene extends Phaser.Scene {
         const platforms : Phaser.Physics.Arcade.StaticGroup = this.createPlatforms();
         this.player = this.createPlayer();
         const stars = this.createStars();
+
+        this.scoreLabel = this.createScoreLabel(16, 16, 0);
 
         this.physics.add.collider(this.player, platforms);
         this.physics.add.collider(stars, platforms);
@@ -121,10 +126,19 @@ export default class MainScene extends Phaser.Scene {
     }
 
     collectStar(
-        player: any, 
-        star: any)
-    {
-        
-        star.disableBody(true, true);
+        player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+        star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+    ) {
+        (star as Phaser.Physics.Arcade.Sprite).disableBody(true, true);
+        this.scoreLabel?.add(10);
+    }
+
+    createScoreLabel(x: number, y: number, score: number) {
+        const style = { fontSize: '32px', fill: '#000' };
+        const label = new ScoreLabel(this, x, y, score, style);
+
+        this.add.existing(label);
+
+        return label;
     }
 }
