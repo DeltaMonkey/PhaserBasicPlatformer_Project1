@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 
 const GROUND_KEY = 'ground';
 const DUDE_KEY = 'dude';
+const STAR_KEY = 'star';
 
 export default class MainScene extends Phaser.Scene {
 
-    private platforms: Phaser.Physics.Arcade.StaticGroup;
     private player?: Phaser.Physics.Arcade.Sprite;
     private cursor?: Phaser.Types.Input.Keyboard.CursorKeys;
 
@@ -20,7 +20,7 @@ export default class MainScene extends Phaser.Scene {
         this.load.image('bomb', 'assets/bomb.png');
         this.load.image(GROUND_KEY, 'assets/platform.png');
         this.load.image('sky', 'assets/sky.png');
-        this.load.image('star', 'assets/star.png');
+        this.load.image(STAR_KEY, 'assets/star.png');
         this.load.spritesheet(DUDE_KEY, 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
     }
 
@@ -28,10 +28,14 @@ export default class MainScene extends Phaser.Scene {
         this.add.image(400, 300, 'sky');
         // this.add.image(400, 300, 'star')
         
-        this.platforms = this.createPlatforms();
+        const platforms : Phaser.Physics.Arcade.StaticGroup = this.createPlatforms();
         this.player = this.createPlayer();
+        const stars = this.createStars();
 
-        this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.collider(this.player, platforms);
+        this.physics.add.collider(stars, platforms);
+
+        this.physics.add.overlap(this.player, stars, this.collectStar, undefined, this);
 
         this.cursor = this.input.keyboard!.createCursorKeys();
     }
@@ -98,5 +102,29 @@ export default class MainScene extends Phaser.Scene {
         });
 
         return player;
+    }
+
+    createStars() {
+        const stars: Phaser.Physics.Arcade.Group = this.physics.add.group({
+            key: STAR_KEY,
+            repeat: 11,
+            setXY: { x: 12, y: 0, stepX: 70 }
+        });
+
+        stars.children.iterate((child) => {
+			const childBody = child.body as Phaser.Physics.Arcade.Body;
+            childBody.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            return true;
+		});
+
+        return stars;
+    }
+
+    collectStar(
+        player: any, 
+        star: any)
+    {
+        
+        star.disableBody(true, true);
     }
 }
