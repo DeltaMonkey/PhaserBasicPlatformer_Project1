@@ -4,6 +4,7 @@ export default class MainScene extends Phaser.Scene {
 
     private platforms!: Phaser.Physics.Arcade.StaticGroup;
     private player: Phaser.Physics.Arcade.Sprite;
+    private cursor?: Phaser.Types.Input.Keyboard.CursorKeys;
 
     constructor() {
         super('MainScene');
@@ -52,8 +53,30 @@ export default class MainScene extends Phaser.Scene {
         });
 
         this.physics.add.collider(this.player, this.platforms);
+
+        this.cursor = this.input.keyboard!.createCursorKeys();
     }
 
     update() {
+
+        if(!this.cursor) return;
+
+        if(this.cursor.left?.isDown) {
+            this.player?.setVelocityX(-160);
+            this.player?.anims.play('left', true);
+        }
+        else if(this.cursor.right?.isDown) {
+            this.player?.setVelocityX(160);
+            this.player?.anims.play('right', true);
+        }
+        else {
+            this.player?.setVelocityX(0);
+            this.player?.anims.play('turn');
+        }     
+        
+        if(this.cursor.up?.isDown && this.player?.body?.touching.down)
+        {
+            this.player?.setVelocityY(-330);
+        }
     }
 }
