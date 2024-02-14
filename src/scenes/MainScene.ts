@@ -1,15 +1,21 @@
 import Phaser from 'phaser';
 import ScoreLabel from '../ui/ScoreLabel';
+import BombSpawner from '../helpers/BombSpawner';
 
 const GROUND_KEY = 'ground';
 const DUDE_KEY = 'dude';
 const STAR_KEY = 'star';
+const BOMB_KEY = 'bomb';
 
 export default class MainScene extends Phaser.Scene {
 
     private player?: Phaser.Physics.Arcade.Sprite;
     private cursor?: Phaser.Types.Input.Keyboard.CursorKeys;
     private scoreLabel?: ScoreLabel;
+    private stars?: Phaser.Physics.Arcade.Group;
+    private bombSpawner?: BombSpawner;
+
+    private gameOver: boolean;
 
     constructor() {
         super('MainScene');
@@ -17,35 +23,45 @@ export default class MainScene extends Phaser.Scene {
         this.player = undefined;
         this.cursor = undefined;
         this.scoreLabel = undefined;
+        this.bombSpawner = undefined;
+
+        this.gameOver = false;
     }
 
-    preload() {
-        this.load.image('bomb', 'assets/bomb.png');
+    public preload(): void {
+        this.load.image(BOMB_KEY, 'assets/bomb.png');
         this.load.image(GROUND_KEY, 'assets/platform.png');
         this.load.image('sky', 'assets/sky.png');
         this.load.image(STAR_KEY, 'assets/star.png');
         this.load.spritesheet(DUDE_KEY, 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
     }
 
-    create() {
+    public create(): void {
         this.add.image(400, 300, 'sky');
         // this.add.image(400, 300, 'star')
         
         const platforms : Phaser.Physics.Arcade.StaticGroup = this.createPlatforms();
         this.player = this.createPlayer();
-        const stars = this.createStars();
+        this.stars = this.createStars();
 
         this.scoreLabel = this.createScoreLabel(16, 16, 0);
 
-        this.physics.add.collider(this.player, platforms);
-        this.physics.add.collider(stars, platforms);
+        this.bombSpawner = new BombSpawner(this, BOMB_KEY);
+        const bombGroup = this.bombSpawner.group;
 
-        this.physics.add.overlap(this.player, stars, this.collectStar, undefined, this);
+        this.physics.add.collider(this.player, platforms);
+        this.physics.add.collider(this.stars, platforms);
+        this.physics.add.collider(bombGroup, platforms);
+        this.physics.add.collider(this.player, bombGroup, this.hitBomb, undefined, this);
+
+        this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this);
 
         this.cursor = this.input.keyboard!.createCursorKeys();
     }
 
-    update() {
+    public update(): void {
+
+        if (this.gameOver) return;
 
         if(!this.cursor) return;
 
@@ -109,7 +125,7 @@ export default class MainScene extends Phaser.Scene {
         return player;
     }
 
-    createStars() {
+    private createStars(): Phaser.Physics.Arcade.Group {
         const stars: Phaser.Physics.Arcade.Group = this.physics.add.group({
             key: STAR_KEY,
             repeat: 11,
@@ -125,20 +141,44 @@ export default class MainScene extends Phaser.Scene {
         return stars;
     }
 
-    collectStar(
+    private collectStar(
         player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
         star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
-    ) {
+    ): void {
         (star as Phaser.Physics.Arcade.Sprite).disableBody(true, true);
+
         this.scoreLabel?.add(10);
+
+        if (this.stars?.countActive(true) === 0) {
+            // A new batch of stars to collectü
+            this.stars.children.iterate((child) => {
+                const childSprite = child as Phaser.Physics.Arcade.Sprite;
+                childSprite.enableBody(true, childSprite.x, 0, true, true);
+                return true;
+            })
+        }
+
+        this.bombSpawner?.spawn(this.player!.x);
+
     }
 
-    createScoreLabel(x: number, y: number, score: number) {
+    private createScoreLabel(x: number, y: number, score: number): ScoreLabel {
         const style = { fontSize: '32px', fill: '#000' };
         const label = new ScoreLabel(this, x, y, score, style);
 
         this.add.existing(label);
 
         return label;
+    }
+
+    private hitBomb(
+        player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+        bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile 
+    ): void {
+            this.physics.pause();
+            const playerSprite = (player as Phaser.Physics.Arcade.Sprite);
+            playerSprite.setTint(0xff0000);
+            playerSprite.anims.play('turn');
+            this.gameOver = true;
     }
 }
